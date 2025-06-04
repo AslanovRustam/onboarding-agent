@@ -2,6 +2,22 @@ import { getWebhookUrls } from "../config/n8nConfig";
 import { logSendMessage, logReceiveMessage, logError } from "../utils/logger";
 import type { ChatMessageData } from "./n8nService";
 
+// Для использования CORSBypass из React контекста
+let corsGlobalFetch: ((url: string, options?: RequestInit) => Promise<Response>) | null = null;
+
+export function setCORSBypassFetch(fetchFn: (url: string, options?: RequestInit) => Promise<Response>) {
+  corsGlobalFetch = fetchFn;
+}
+
+async function makeCORSRequest(url: string, options?: RequestInit): Promise<Response> {
+  if (corsGlobalFetch) {
+    return corsGlobalFetch(url, options);
+  }
+  
+  // Fallback к обычному fetch, если CORS bypass не доступен
+  return fetch(url, options);
+}
+
 export async function sendToWebhook(message: string, sessionId: string, isAudio: boolean = false): Promise<ChatMessageData> {
   const webhookUrls = getWebhookUrls();
   const mainWebhookUrl = webhookUrls[0];
@@ -17,7 +33,7 @@ export async function sendToWebhook(message: string, sessionId: string, isAudio:
   try {
     logSendMessage(message, sessionId, isAudio);
     
-    const response = await fetch(mainWebhookUrl, {
+    const response = await makeCORSRequest(mainWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +92,7 @@ export async function sendSessionInit(sessionId: string): Promise<{ success: boo
   try {
     logSendMessage('Session initialization', sessionId, false);
     
-    const response = await fetch(mainWebhookUrl, {
+    const response = await makeCORSRequest(mainWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,7 +139,7 @@ export async function testWebhookConnection(): Promise<boolean> {
   try {
     logSendMessage('Connection test', 'test-session', false);
     
-    const response = await fetch(testWebhookUrl, {
+    const response = await makeCORSRequest(testWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

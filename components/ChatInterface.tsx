@@ -3,6 +3,8 @@ import { ChatMessage } from "./ChatMessage";
 import { Button } from "./ui/button";
 import { Mic, Send, HelpCircle, CheckCircle, RefreshCw } from "lucide-react";
 import { Logo } from "./Logo";
+import { useCORSBypass } from "./CORSBypass";
+import { setCORSBypassFetch } from "../services/webhookService";
 import "../styles/chat.css";
 import { ChatMessageData } from "../services/n8nService";
 import { initSession, sendMessage } from "../services/hybridService";
@@ -30,6 +32,14 @@ export function ChatInterface() {
   const [initializing, setInitializing] = useState<boolean>(false);
   const [canComplete, setCanComplete] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Получаем CORS bypass функцию
+  const { fetchWithCORSBypass } = useCORSBypass();
+  
+  // Устанавливаем CORS bypass функцию в webhookService при инициализации
+  useEffect(() => {
+    setCORSBypassFetch(fetchWithCORSBypass);
+  }, [fetchWithCORSBypass]);
   
   // Генерация сессии при первой отправке сообщения
   const initializeSessionIfNeeded = async () => {

@@ -24,12 +24,12 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    "api/**/*.ts"
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "api",
     "components/ui/accordion.tsx",
     "components/ui/alert-dialog.tsx",
     "components/ui/alert.tsx",

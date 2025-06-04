@@ -8,6 +8,7 @@ node_modules
 package-minimal.json
 package.simple.json
 vite.config.minimal.ts
+api/
 components/ui/accordion.tsx
 components/ui/alert-dialog.tsx
 components/ui/alert.tsx
