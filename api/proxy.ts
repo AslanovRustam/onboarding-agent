@@ -1,5 +1,17 @@
 // api/proxy.ts
-import { VercelRequest, VercelResponse } from '@vercel/node';
+interface VercelRequest {
+  method?: string;
+  query: { [key: string]: string | string[] | undefined };
+  headers: { [key: string]: string | string[] | undefined };
+  body?: any;
+}
+
+interface VercelResponse {
+  status: (code: number) => VercelResponse;
+  json: (obj: any) => VercelResponse;
+  send: (data: any) => VercelResponse;
+  setHeader: (name: string, value: string) => void;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const targetUrl = req.query.url as string;
@@ -22,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : undefined,
     });
 
-    const data = await response.text(); // может быть JSON или текст
+    const data = await response.text();
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader(
       "Content-Type",

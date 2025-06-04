@@ -1,138 +1,130 @@
-import { ChatMessageData } from "./n8nService";
+import type { ChatMessageData } from "./n8nService";
 
-/**
- * Сервис имитации чат-бота для демонстрации без подключения к n8n
- */
+type ResponseKey = "unknown" | "greeting" | "farewell" | "n8n" | "capabilities";
 
-// Базовые ответы для разных типов запросов
-const responses = {
-  greeting: [
-    "Здравствуйте! Чем я могу вам помочь сегодня?",
-    "Приветствую! Я виртуальный ассистент enable3.io. Чем могу быть полезен?",
-    "Добро пожаловать! Как я могу помочь вам сегодня?",
-  ],
-  
-  farewell: [
-    "Спасибо за обращение! Если возникнут еще вопросы, обращайтесь.",
-    "Всего хорошего! Буду рад помочь вам снова.",
-    "До свидания! Надеюсь, ваш вопрос был решен.",
-  ],
-  
+const responses: Record<ResponseKey, string[]> = {
   unknown: [
-    "Я не совсем понимаю ваш запрос. Можете пояснить подробнее?",
-    "Извините, но я не могу обработать этот запрос. Попробуйте задать вопрос иначе.",
-    "Мне нужно больше информации, чтобы помочь вам с этим вопросом.",
+    "Извините, я не совсем понял ваш вопрос. Не могли бы вы уточнить?",
+    "Это интересный вопрос! Не могли бы вы рассказать больше?", 
+    "Я еще изучаю этот аспект. Можете ли вы предоставить дополнительную информацию?",
+    "Спасибо за вопрос. Давайте разберем это подробнее.",
   ],
-  
-  // Ответы, связанные с n8n
+  greeting: [
+    "Привет! Как дела? Чем могу помочь?",
+    "Здравствуйте! Рад вас видеть. О чем хотели бы поговорить?",
+    "Добро пожаловать! Готов ответить на ваши вопросы.",
+    "Привет! Отличный день для общения, не так ли?",
+  ],
+  farewell: [
+    "До свидания! Было приятно пообщаться.",
+    "Увидимся! Обращайтесь, если появятся вопросы.",
+    "Пока! Хорошего дня!",
+    "До встречи! Надеюсь, наш разговор был полезным.",
+  ],
   n8n: [
-    "Для подключения чата к n8n вам потребуется настроить рабочий процесс (workflow) в вашем экземпляре n8n.",
-    "n8n - это платформа автоматизации, которая может обрабатывать сообщения из чата и интегрировать их с другими сервисами.",
-    "Подключение к n8n требует настройки вебхуков и обработчиков сообщений на стороне n8n.",
+    "n8n - это отличная платформа для автоматизации рабочих процессов!",
+    "С помощью n8n можно создавать мощные интеграции между различными сервисами.",
+    "n8n позволяет автоматизировать множество задач с помощью простого визуального интерфейса.",
+    "Я работаю на базе автоматизации n8n, что позволяет мне быть более эффективным.",
   ],
-  
-  // Ответы о возможностях
   capabilities: [
-    "Я могу помочь вам с настройкой и использованием продуктов enable3.io.",
-    "В мои возможности входит ответ на вопросы, помощь с настройкой и предоставление информации о сервисах enable3.io.",
-    "Я специализируюсь на поддержке пользователей и могу помочь с различными вопросами о платформе enable3.io.",
-  ],
+    "Я могу помочь с ответами на ваши вопросы и ведением диалога.",
+    "Моя задача - помочь вам в онбординге и ответить на возникающие вопросы.",
+    "Я специализируюсь на поддержке пользователей и предоставлении информации.",
+    "Я могу общаться как через текст, так и через голосовые сообщения.",
+  ]
 };
 
-// Функция для получения случайного элемента из массива
-const getRandomResponse = (category: keyof typeof responses): string => {
-  const options = responses[category];
-  return options[Math.floor(Math.random() * options.length)];
-};
-
-// Поиск ключевых слов в сообщении
-const findKeywords = (message: string): string[] => {
-  const keywords = [];
-  const lowerMsg = message.toLowerCase();
-  
-  if (/привет|здравствуй|добрый день|hi|hello/i.test(lowerMsg)) {
-    keywords.push("greeting");
-  }
-  
-  if (/пока|до свидания|спасибо|благодар/i.test(lowerMsg)) {
-    keywords.push("farewell");
-  }
-  
-  if (/n8n|подключ[ае]ни[яе]|интегр|workflow|webhook/i.test(lowerMsg)) {
-    keywords.push("n8n");
-  }
-  
-  if (/возможност|умеешь|что ты|функци|способ/i.test(lowerMsg)) {
-    keywords.push("capabilities");
-  }
-  
-  return keywords;
-};
-
-// Генерация ответа на основе ключевых слов
-const generateResponse = (message: string): string => {
-  const keywords = findKeywords(message);
-  
-  if (keywords.length === 0) {
-    return getRandomResponse("unknown");
-  }
-  
-  // Формируем полный ответ, комбинируя ответы из разных категорий
-  if (keywords.length === 1) {
-    return getRandomResponse(keywords[0] as keyof typeof responses);
-  } else {
-    // Комбинируем несколько ответов, если найдено несколько ключевых слов
-    const responses = keywords.map(keyword => 
-      getRandomResponse(keyword as keyof typeof responses)
-    );
-    return responses.join(" ");
-  }
-};
-
-/**
- * Имитационный сервис для демонстрации работы чата без n8n
- */
-export class MockService {
-  // Имитация задержки ответа
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-  
-  /**
-   * Имитирует отправку сообщения и получение ответа
-   */
-  async sendMessage(message: string, sessionId: string = 'demo'): Promise<ChatMessageData> {
-    // Имитация задержки ответа (1-3 секунды)
-    const responseTime = 1000 + Math.random() * 2000;
-    await this.delay(responseTime);
-    
-    // Генерация ответа на основе содержимого сообщения
-    const responseText = generateResponse(message);
-    
-    return {
-      id: Date.now(),
-      isUser: false,
-      message: responseText,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    };
-  }
-  
-  /**
-   * Имитирует инициализацию сессии
-   */
-  async initSession(userId: string, initialContext: Record<string, any> = {}): Promise<string> {
-    // Имитация задержки (0.5-1.5 секунды)
-    const responseTime = 500 + Math.random() * 1000;
-    await this.delay(responseTime);
-    
-    return `demo-session-${userId}`;
-  }
+function getRandomResponse(category: ResponseKey): string {
+  const categoryResponses = responses[category];
+  return categoryResponses[Math.floor(Math.random() * categoryResponses.length)];
 }
 
-// Создание и экспорт экземпляра сервиса
-export const createMockService = (): MockService => {
-  return new MockService();
-};
+function categorizeMessage(message: string): ResponseKey {
+  const lowerMessage = message.toLowerCase();
+  
+  if (lowerMessage.includes("привет") || lowerMessage.includes("здравствуй") || lowerMessage.includes("добро")) {
+    return "greeting";
+  }
+  
+  if (lowerMessage.includes("пока") || lowerMessage.includes("до свидания") || lowerMessage.includes("спасибо")) {
+    return "farewell";
+  }
+  
+  if (lowerMessage.includes("n8n") || lowerMessage.includes("автоматизация") || lowerMessage.includes("интеграция")) {
+    return "n8n";
+  }
+  
+  if (lowerMessage.includes("можешь") || lowerMessage.includes("умеешь") || lowerMessage.includes("способност")) {
+    return "capabilities";
+  }
+  
+  return "unknown";
+}
+
+export function generateMockResponse(message: string, sessionId: string): ChatMessageData {
+  // Базовая логика для генерации ответа
+  const category = categorizeMessage(message);
+  const response = getRandomResponse(category);
+  
+  return {
+    id: Date.now(),
+    isUser: false,
+    message: response,
+    timestamp: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+export function generateSmartMockResponse(message: string, sessionId: string): ChatMessageData {
+  const keywords = extractKeywords(message);
+  
+  if (keywords.length === 0) {
+    return generateMockResponse(message, sessionId);
+  }
+  
+  // Генерируем ответы на основе ключевых слов
+  const responses: string[] = keywords.map((keyword: string) =>
+    getRandomResponse(keyword as ResponseKey)
+  );
+  
+  // Комбинируем ответы
+  const combinedResponse = responses.join(" ");
+  
+  return {
+    id: Date.now(),
+    isUser: false,
+    message: combinedResponse,
+    timestamp: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+}
+
+function extractKeywords(message: string): string[] {
+  const keywordMap: Record<string, ResponseKey> = {
+    "привет": "greeting",
+    "здравствуй": "greeting", 
+    "добро": "greeting",
+    "пока": "farewell",
+    "спасибо": "farewell",
+    "n8n": "n8n",
+    "автоматизация": "n8n",
+    "можешь": "capabilities",
+    "умеешь": "capabilities",
+  };
+  
+  const lowerMessage = message.toLowerCase();
+  const foundKeywords: string[] = [];
+  
+  for (const [keyword, category] of Object.entries(keywordMap)) {
+    if (lowerMessage.includes(keyword)) {
+      foundKeywords.push(category);
+    }
+  }
+  
+  return [...new Set(foundKeywords)]; // Убираем дубликаты
+}

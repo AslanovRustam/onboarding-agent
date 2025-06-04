@@ -1,138 +1,146 @@
-import { getProxyWebhookUrl } from "../config/n8nConfig";
+import { getWebhookUrls } from "../config/n8nConfig";
+import { logSendMessage, logReceiveMessage, logError } from "../utils/logger";
+import type { ChatMessageData } from "./n8nService";
 
-/**
- * Сервис для тестирования подключения к вебхуку
- */
-export const webhookService = {
-  /**
-   * Проверяет доступность вебхука с помощью HEAD-запроса
-   * @returns Promise с информацией о доступности
-   */
-  checkAvailability: async (): Promise<{ available: boolean; status?: number; error?: string }> => {
-    try {
-      const proxyUrl = getProxyWebhookUrl();
-      const response = await fetch(proxyUrl, { method: 'HEAD' });
-      
-      return {
-        available: response.ok,
-        status: response.status
-      };
-    } catch (error) {
-      return {
-        available: false,
-        error: error.message
-      };
-    }
-  },
+export async function sendToWebhook(message: string, sessionId: string, isAudio: boolean = false): Promise<ChatMessageData> {
+  const webhookUrls = getWebhookUrls();
+  const mainWebhookUrl = webhookUrls[0];
   
-  /**
-   * Отправляет тестовое сообщение на вебхук и возвращает результат
-   * @param testMessage Тестовое сообщение для отправки
-   * @returns Promise с результатом отправки
-   */
-  sendTestMessage: async (testMessage: string): Promise<{
-    success: boolean;
-    status?: number;
-    data?: any;
-    error?: string;
-    responseTime?: number;
-  }> => {
-    const startTime = Date.now();
-    try {
-      const proxyUrl = getProxyWebhookUrl();
-      const payload = {
-        message: testMessage,
-        sessionId: `test-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        type: 'text',
-        source: 'enable3-chat-test'
-      };
-      
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      const responseTime = Date.now() - startTime;
-      
-      let data;
-      try {
-        const text = await response.text();
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          data = { rawText: text };
-        }
-      } catch (e) {
-        data = { error: 'Не удалось прочитать ответ' };
-      }
-      
-      return {
-        success: response.ok,
-        status: response.status,
-        data,
-        responseTime
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-        responseTime: Date.now() - startTime
-      };
+  const payload = {
+    content: message,
+    sessionId: sessionId,
+    timestamp: new Date().toISOString(),
+    type: isAudio ? "audio" : "text",
+    source: "chat-interface"
+  };
+
+  try {
+    logSendMessage(message, sessionId, isAudio);
+    
+    const response = await fetch(mainWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  },
-  
-  /**
-   * Получает статистику производительности вебхука
-   * @param samples Количество тестовых запросов для сбора статистики
-   * @returns Promise со статистикой производительности
-   */
-  getPerformanceStats: async (samples: number = 3): Promise<{
-    success: boolean;
-    avgResponseTime?: number;
-    minResponseTime?: number;
-    maxResponseTime?: number;
-    successRate?: number;
-    error?: string;
-  }> => {
-    try {
-      const results = [];
-      
-      for (let i = 0; i < samples; i++) {
-        const result = await webhookService.sendTestMessage(`Тест производительности #${i+1}`);
-        results.push(result);
-        
-        // Небольшая пауза между запросами
-        if (i < samples - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
-      
-      const successfulRequests = results.filter(r => r.success);
-      const responseTimes = results.map(r => r.responseTime).filter(Boolean) as number[];
-      
-      if (responseTimes.length === 0) {
-        return {
-          success: false,
-          error: 'Не удалось получить время отклика ни для одного запроса'
-        };
-      }
-      
-      return {
-        success: true,
-        avgResponseTime: responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length,
-        minResponseTime: Math.min(...responseTimes),
-        maxResponseTime: Math.max(...responseTimes),
-        successRate: (successfulRequests.length / results.length) * 100
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
+
+    const responseData = await response.text();
+    logReceiveMessage(responseData);
+
+    return {
+      id: Date.now(),
+      isUser: false,
+      message: responseData || "Сообщение обработано",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logError('Ошибка при отправке на webhook', {
+      error: errorMessage,
+      url: mainWebhookUrl,
+      payload
+    });
+
+    return {
+      id: Date.now(),
+      isUser: false,
+      message: `Ошибка сети: ${errorMessage}`,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isError: true
+    };
   }
-};
+}
+
+export async function sendSessionInit(sessionId: string): Promise<{ success: boolean; message?: string }> {
+  const webhookUrls = getWebhookUrls();
+  const mainWebhookUrl = webhookUrls[0];
+  
+  const payload = {
+    action: "init_session",
+    sessionId: sessionId,
+    timestamp: new Date().toISOString(),
+    source: "chat-interface"
+  };
+
+  try {
+    logSendMessage('Session initialization', sessionId, false);
+    
+    const response = await fetch(mainWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.text();
+    logReceiveMessage({ sessionId, response: responseData });
+
+    return {
+      success: true,
+      message: responseData
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logError('Ошибка при инициализации сессии', {
+      error: errorMessage,
+      sessionId,
+      url: mainWebhookUrl
+    });
+
+    return {
+      success: false,
+      message: errorMessage
+    };
+  }
+}
+
+export async function testWebhookConnection(): Promise<boolean> {
+  const webhookUrls = getWebhookUrls();
+  const testWebhookUrl = webhookUrls[1] || webhookUrls[0];
+  
+  const payload = {
+    action: "test_connection",
+    timestamp: new Date().toISOString(),
+    source: "chat-interface"
+  };
+
+  try {
+    logSendMessage('Connection test', 'test-session', false);
+    
+    const response = await fetch(testWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const isSuccess = response.ok;
+    logReceiveMessage({ success: isSuccess, status: response.status });
+    
+    return isSuccess;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logError('Ошибка при тестировании подключения', {
+      error: errorMessage,
+      url: testWebhookUrl
+    });
+    return false;
+  }
+}
