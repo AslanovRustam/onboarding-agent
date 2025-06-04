@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Onboarding - enable3.io</title>
+    <meta name="description" content="Чат-интерфейс для онбординга enable3.io" />
+    <meta name="keywords" content="onboarding, chat, enable3" />
+    
+    <!-- Preconnect к доменам для улучшения производительности -->
+    <link rel="preconnect" href="https://n8n-djwe.onrender.com" />
+    
+    <!-- Базовые мета-теги для социальных сетей -->
+    <meta property="og:title" content="Test Onboarding - enable3.io" />
+    <meta property="og:description" content="Чат-интерфейс для онбординга enable3.io" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Стили для предотвращения FOUC -->
+    <style>
+      body {
+        margin: 0;
+        background-color: #121212;
+        color: white;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      
+      /* Скрыть содержимое до загрузки React */
+      #root:empty::before {
+        content: "Загрузка...";
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>

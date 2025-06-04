@@ -1,0 +1,71 @@
+/* Стили для скроллбара в чате */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+  background-color: #1A1A1A;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background-color: #333333;
+  border-radius: 10px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background-color: #444444;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background-color: #1A1A1A;
+  border-radius: 10px;
+}
+
+/* Стили для Firefox */
+.chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 #1A1A1A;
+}
+
+/* Обеспечиваем появление скроллбара только при необходимости */
+.chat-messages {
+  overflow-y: auto;
+}
+
+/* Анимация печатающего индикатора */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  column-gap: 6px;
+  height: 20px;
+}
+
+.typing-indicator span {
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: #00FF00;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: typing 1.5s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
